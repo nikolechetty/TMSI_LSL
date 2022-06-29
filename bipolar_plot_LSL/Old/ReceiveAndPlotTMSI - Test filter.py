@@ -15,11 +15,12 @@ import pylsl
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
 from typing import List
+from filtering_functions import *
 
 # Basic parameters for the plotting window
 plot_duration = 5  # how many seconds of data to show
-update_interval = 20  # ms between screen updates
-pull_interval = 50  # ms between each pull operation
+update_interval = 200  # ms between screen updates
+pull_interval = 500  # ms between each pull operation
 
 
 class Inlet:
@@ -47,6 +48,20 @@ class Inlet:
         # We don't know what to do with a generic inlet, so we skip it.
         pass
 
+class RawCurveItem():
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.xData = None  ## raw values
+        self.yData = None
+
+    def getData(self):
+        return self.xData, self.yData
+
+    def setData(self, x, y):
+        self.xData = x
+        self.yData = y 
 
 class DataInlet(Inlet):
     """A DataInlet represents an inlet with continuous, multi-channel data that
@@ -63,6 +78,7 @@ class DataInlet(Inlet):
         self.curves = [pg.PlotCurveItem(x=empty, y=empty, autoDownsample=True) for _ in range(self.channel_count)]
         for curve in self.curves:
             plt.addItem(curve)
+        self.raw_curves = [RawCurveItem() for _ in range(self.channel_count)]
 
     def pull_and_plot(self, plot_time, plt):
         # pull the data
@@ -79,7 +95,9 @@ class DataInlet(Inlet):
             for ch_ix in range(0, self.channel_count -1): #skip the last channel - which is time
                 # we don't pull an entire screen's worth of data, so we have to
                 # trim the old data and append the new data to it
-                old_x, old_y = self.curves[ch_ix].getData()
+                old_x, old_filtered_y = self.curves[ch_ix].getData()
+
+                old_raw_x, old_raw_y = self.raw_curves[ch_ix].getData() ############
                 # the timestamps are identical for all channels, so we need to do
                 # this calculation only once
                 if ch_ix == 0:
@@ -92,10 +110,13 @@ class DataInlet(Inlet):
                     # append new timestamps to the trimmed old timestamps
                     this_x = np.hstack((old_x[old_offset:], ts[new_offset:]))
                 # append new data to the trimmed old data
-                this_y = np.hstack((old_y[old_offset:], y[new_offset:, ch_ix] - ch_ix))
-                
+                this_raw_y = np.hstack((old_raw_y[old_offset:], y[new_offset:, ch_ix] - ch_ix))
                 # replace the old data
-                self.curves[ch_ix].setData(this_x, this_y)
+                
+                this_filtered_y = bandpass_filter(this_raw_y, 20, 500, 5, 4000) ###########
+
+                self.raw_curves[ch_ix].setData(this_x, this_raw_y)
+                self.curves[ch_ix].setData(this_x, this_filtered_y)
 
 
 class MarkerInlet(Inlet):

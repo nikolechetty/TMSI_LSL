@@ -1,2 +1,3 @@
 # ignore pycache-folders
 __pycache__/
+test_LSL/Windows_x64/

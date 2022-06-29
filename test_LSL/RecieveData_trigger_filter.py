@@ -4,12 +4,12 @@ from pylsl import StreamInlet, resolve_stream, StreamInfo
 from buffer_trigger_filter import *
 import time
 
-NUM_SAMPLES_BUFFER = 1000
-FILTER_AFTER_N = 100
-BP_LOW_CUTOFF = 5 
-BP_HIGH_CUTOFF = 40 
+NUM_SAMPLES_BUFFER = 2000
+FILTER_AFTER_N = 1000
+BP_LOW_CUTOFF = 20
+BP_HIGH_CUTOFF = 500
 ORDER = 5
-LP_HIGH_CUTOFF = 5
+LP_HIGH_CUTOFF = 10
 
 
 def main():
@@ -43,7 +43,10 @@ def main():
         
         if process_data.counter % process_data.filterAfterN == 0:
             process_data.processBuffer(BP_LOW_CUTOFF, BP_HIGH_CUTOFF, LP_HIGH_CUTOFF, ORDER)
-            print(process_data.meanData)
+            print("%.2f" % process_data.meanData)
+
+        # Add pulse to the peizotac system 
+
 
 
 

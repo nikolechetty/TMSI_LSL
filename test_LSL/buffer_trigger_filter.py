@@ -45,7 +45,8 @@ class processData:
         self.lpFilteredData = scipy.signal.filtfilt(b, a, self.rectifiedData, axis = 0)
 
     def takeMean(self):
-        self.meanData = np.mean(self.lpFilteredData)
+        self.meanData = np.mean(self.lpFilteredData) # currently the mean of the whole nSamples AND ALL CHANNELS 
+        # This could be reduced to only be the most recent samples (such as the most recent filterAfterN samples)
 
     def processBuffer(self, bpLowCutoff, bpHighCutoff, lpHIghCutoff, order):
         self.bandpassFilterData(bpLowCutoff, bpHighCutoff, order)

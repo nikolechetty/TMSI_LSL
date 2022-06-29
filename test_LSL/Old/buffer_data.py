@@ -19,7 +19,7 @@ class processData:
         self.samplingRate = samplingRate
 
         self.rawData = np.empty((self.nSamples, self.nChannels))
-        self.filteredData = np.empty((self.nSamples, self.nChannels))
+        self.bpFilteredData = np.empty((self.nSamples, self.nChannels))
         self.counter = 0 
         
     # raw data - empty numpy 
@@ -40,7 +40,7 @@ class processData:
 
     def bandpassFilterData(self):
         b, a = scipy.signal.butter(self.order, [self.bpLowCutoff, self.bpHighCutoff], 'bandpass',fs=self.samplingRate) #analog=True
-        self.filteredData = scipy.signal.filtfilt(b, a, self.rawData, axis = 0)
+        self.bpFilteredData = scipy.signal.filtfilt(b, a, self.rawData, axis = 0)
 
         
          

@@ -54,7 +54,7 @@ def main():
             print('type: ', info.type())
 
         # create a new inlet to read from the stream
-        inlet = StreamInlet(streams[0]) # This is only looking for ONE stream
+        inlet = StreamInlet(streams[0]) # This is only looking for ONE stream, the first one found
 
 
         time.sleep(2) # Added so I can see the info data before data starts streaming
@@ -78,14 +78,19 @@ def main():
                 if process_data.meanData > PULSE_THRESHOLD:
                     tdk.Pulse(device, TACTOR_ID, TACTOR_PULSE_WIDTH, TACTOR_DELAY)
 
-    except KeyboardInterrupt:
+
+    finally: # except KeyboardInterrupt
+        # Save the raw data to a file
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        save_name = "raw_data_" + timestr
+        process_data.save(save_name)
+
+        # Shutdown the connection to the piezotac
         tdk.UpdateTI()
         time.sleep(0.5)
         tdk.Close(device)
         print("Disconnected.")
-
         tdk.ShutdownTI()
-
 
 
 

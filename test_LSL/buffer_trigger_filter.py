@@ -6,7 +6,7 @@ import scipy.signal
 
 class processData:
 
-    def __init__(self, nChannels, samplingRate, nSamples, filterAfterN): 
+    def __init__(self, nChannels, samplingRate, nSamples, filterAfterN, largeInitializedSpace = 1000000): 
         self.nSamples = nSamples
         print('Length of buffer set to:', nSamples)
         self.nChannels = nChannels
@@ -14,28 +14,32 @@ class processData:
         self.filterAfterN = filterAfterN
         self.samplingRate = samplingRate
 
-        self.rawData = np.empty((self.nSamples, self.nChannels))
+        self.largeInitializedSpace = largeInitializedSpace #### this is arbitary 
+        self.rawData = np.empty((self.largeInitializedSpace, self.nChannels))
+        self.rawDataBuffer = np.empty((self.nSamples, self.nChannels))
         self.bpFilteredData = np.empty((self.nSamples, self.nChannels))
         self.lpFilteredData = np.empty((self.nSamples, self.nChannels))
         self.rectifiedData = np.empty((self.nSamples, self.nChannels))
         self.counter = 0 
         
-    # raw data - empty numpy 
-    # filtered data - empty numpy 
-    # counter 
 
     def addSample(self, newSample):
-    # numpy.roll 
-    # FIFO buffer 
-    # pop data from the array and push new sample 
-        self.rawData = np.roll(self.rawData, -1, axis = 0)
-        self.rawData[-1,:] = newSample
+        # numpy.roll 
+        # FIFO buffer 
+        # pop data from the array and push new sample 
+        self.rawDataBuffer = np.roll(self.rawDataBuffer, -1, axis = 0)
+        self.rawDataBuffer[-1,:] = newSample
         self.counter += 1
 
+        if self.counter >= np.shape(self.rawData)[0]:
+            # if you run out of space in the initialed, add more empty sapce
+            self.rawData = np.append(self.rawData, np.empty((self.largeInitializedSpace, self.nChannels)))
+
+ 
 
     def bandpassFilterData(self, bpLowCutoff, bpHighCutoff, order):
         b, a = scipy.signal.butter(order, [bpLowCutoff, bpHighCutoff], 'bandpass',fs=self.samplingRate)
-        self.bpFilteredData = scipy.signal.filtfilt(b, a, self.rawData, axis = 0)
+        self.bpFilteredData = scipy.signal.filtfilt(b, a, self.rawDataBuffer, axis = 0)
 
     def rectifyData(self):
         self.rectifiedData = abs(self.bpFilteredData)
@@ -55,5 +59,6 @@ class processData:
         self.takeMean()
 
 
-
+    def save(self, filename):
+        np.savetxt(filename, self.rawData)
 

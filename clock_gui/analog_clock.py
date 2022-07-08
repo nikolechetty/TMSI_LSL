@@ -6,11 +6,14 @@ import ctypes
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
+START_ANGLE = 90         # 0 deg is north, degrees go clockwise for positive
+EXTENT_ANGLE = 45
+
 def Clock0(w, nx, ny):                                  # clock draw function
    x0 = nx/2; lx = 9*nx/20              # center and half-width of clock face
    y0 = ny/2; ly = 9*ny/20
-   r0 = 0.9 * min(lx,ly)                # distance of hour labels from center
-   r1 = 0.6 * min(lx,ly)                                # length of hour hand
+#    r0 = 0.9 * min(lx,ly)                # distance of hour labels from center
+#    r1 = 0.6 * min(lx,ly)                                # length of hour hand
    r2 = 0.8 * min(lx,ly)                              # length of minute hand
 
    w.create_oval(x0-lx, y0-ly, x0+lx, y0+ly, width=2)            # clock face
@@ -20,7 +23,8 @@ def Clock0(w, nx, ny):                                  # clock draw function
 #       y = y0 - r0 * cos(phi)
 #       w.create_text(x, y, text=str(i))                           # hour label
 
-   w.create_arc(x0-lx, y0-ly, x0+lx, y0+ly, start=290, extent=20, style=PIESLICE, fill="blue")
+   starting_formula = -(START_ANGLE-90)
+   w.create_arc(x0-lx, y0-ly, x0+lx, y0+ly, start=starting_formula, extent=-EXTENT_ANGLE, style=PIESLICE, fill="blue")
 
    t = localtime()                                             # current time
    t_s = t[5]                                                       # seconds
@@ -37,10 +41,16 @@ def Clock0(w, nx, ny):                                  # clock draw function
 #    y = y0 - r2 * cos(phi)                                  # draw minute hand
 #    w.create_line(x0, y0, x, y, arrow=LAST, fill="blue", width=4)
 
-   phi = pi/30 * t_s                                      # second hand angle
+   phi = pi/30 * t_s
+   phi_degrees = phi*180/pi                                    # second hand angle
    x = x0 + r2 * sin(phi)                             # position of arrowhead
    y = y0 - r2 * cos(phi)
-   w.create_line(x0, y0 , x, y, arrow=LAST, width=2)                # draw second hand
+   w.create_line(x0, y0 , x, y, arrow=LAST, width=4)       # draw second hand
+   print('Angle of hand:', phi_degrees)
+#    print("x:", x, ", y:", y)
+
+   if phi_degrees >= START_ANGLE and phi_degrees <= (START_ANGLE+EXTENT_ANGLE):
+    print("You're in the target!")
 
 def Clock(w, nx, ny):                               # clock callback function
    w.delete(ALL)                                              # delete canvas

@@ -10,19 +10,14 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 START_ANGLE = 90         # 0 deg is north, degrees go clockwise for positive
 EXTENT_ANGLE = 45
 
-def Clock0(w, nx, ny):                                  # clock draw function
+
+def updateClock(w, nx, ny):                                  # clock draw function
     x0 = nx/2; lx = 9*nx/20              # center and half-width of clock face
     y0 = ny/2; ly = 9*ny/20
-    #    r0 = 0.9 * min(lx,ly)                # distance of hour labels from center
-    #    r1 = 0.6 * min(lx,ly)                                # length of hour hand
+
     r2 = 0.8 * min(lx,ly)                              # length of minute hand
 
     w.create_oval(x0-lx, y0-ly, x0+lx, y0+ly, width=2)            # clock face
-    #    for i in range(1,13):                               # label the clock face
-    #       phi = pi/6 * i                              # angular position of label
-    #       x = x0 + r0 * sin(phi)                    # Cartesian position of label
-    #       y = y0 - r0 * cos(phi)
-    #       w.create_text(x, y, text=str(i))                           # hour label
 
     starting_formula = -(START_ANGLE-90)
     w.create_arc(x0-lx, y0-ly, x0+lx, y0+ly, start=starting_formula, extent=-EXTENT_ANGLE, style=PIESLICE, fill="blue")
@@ -35,34 +30,23 @@ def Clock0(w, nx, ny):                                  # clock draw function
     # trying to add more precise movement of the hand ####################### done on friday 
 
     dt = datetime.now()
-    t_s_with_micros = float("%s.%s" % (dt.second, dt.microsecond))
-    phi_micros = 360/60 * t_s_with_micros
-    print('Time:', t_s_with_micros, 'Angle:', phi_micros)
+    t_s_with_micros =  dt.second + dt.microsecond/1e6
+    phi_micros_rad = pi/30 * t_s_with_micros
+    phi_micros_degrees = 360/60 * t_s_with_micros
 
-    #    phi = pi/6 * t_h                                         # hour hand angle
-    #    x = x0 + r1 * sin(phi)                             # position of arrowhead
-    #    y = y0 - r1 * cos(phi)                                    # draw hour hand
-    #    w.create_line(x0, y0, x, y, arrow=LAST, fill="red", width=6)
-
-    #    phi = pi/30 * t_m                                      # minute hand angle
-    #    x = x0 + r2 * sin(phi)                             # position of arrowhead
-    #    y = y0 - r2 * cos(phi)                                  # draw minute hand
-    #    w.create_line(x0, y0, x, y, arrow=LAST, fill="blue", width=4)
-
-    phi = pi/30 * t_s
-    phi_degrees = phi*180/pi                                    # second hand angle
-    x = x0 + r2 * sin(phi)                             # position of arrowhead
-    y = y0 - r2 * cos(phi)
+    x = x0 + r2 * sin(phi_micros_rad)                             # position of arrowhead
+    y = y0 - r2 * cos(phi_micros_rad)
     w.create_line(x0, y0 , x, y, arrow=LAST, width=4)       # draw second hand
-    print('Angle of hand:', phi_degrees)
+    # print('Angle of hand:', phi_degrees)
+    print('Time:', t_s_with_micros, 'Angle deg:', phi_micros_degrees, 'Angle rad:', phi_micros_rad)
     #    print("x:", x, ", y:", y)
 
-    if phi_degrees >= START_ANGLE and phi_degrees <= (START_ANGLE+EXTENT_ANGLE):
+    if phi_micros_degrees >= START_ANGLE and phi_micros_degrees <= (START_ANGLE+EXTENT_ANGLE):
         print("You're in the target!")
 
 def Clock(w, nx, ny):                               # clock callback function
     w.delete(ALL)                                              # delete canvas
-    Clock0(w, nx, ny)                                             # draw clock
+    updateClock(w, nx, ny)                                             # draw clock
     w.after(10, Clock, w, nx, ny)                  # call callback after 10 ms
 
 # main

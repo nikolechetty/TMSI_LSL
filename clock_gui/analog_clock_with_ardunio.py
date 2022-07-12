@@ -4,15 +4,18 @@ from math import *
 from time import *
 import ctypes
 from datetime import datetime
+import serial 
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
+
+arduino = serial.Serial(port='COM4', baudrate=115200, timeout=.1)
 
 START_ANGLE = 90         # 0 deg is north, degrees go clockwise for positive
 EXTENT_ANGLE = 60
 ACTIVE_TIME = 20000 # 20 seconds
 
-target_trigger = False
-speed_factor = 10
+# target_trigger = False
+speed_factor = 3
 
 def updateClock(w, nx, ny):  # clock draw function
     # helper variables 
@@ -30,8 +33,8 @@ def updateClock(w, nx, ny):  # clock draw function
     # Use the time to create smooth movement of the clock hand
     dt = datetime.now()
     t_s_with_micros =  (dt.second + dt.microsecond/1e6)*speed_factor
-    phi_micros_rad = pi/30 * t_s_with_micros
-    phi_micros_degrees = 360/60 * t_s_with_micros
+    phi_micros_rad = (pi/30 * t_s_with_micros) 
+    phi_micros_degrees = 360/60 * t_s_with_micros % 360
 
 
     x = x0 + r2 * sin(phi_micros_rad)   # position of end of the arrowhead
@@ -44,9 +47,12 @@ def updateClock(w, nx, ny):  # clock draw function
     # know whether you are in the target or not
     if phi_micros_degrees >= START_ANGLE and phi_micros_degrees <= (START_ANGLE+EXTENT_ANGLE):
         print("You're in the target!")
-        target_trigger = True
+        arduino.write(bytes([1]))
+        print(arduino.readline())
     else:
-        target_trigger = False
+        # message = bytes(0, 'utf-8')
+        arduino.write(bytes([0]))
+        print(arduino.readline())
 
 
 def Clock(w, nx, ny):                                # clock callback function

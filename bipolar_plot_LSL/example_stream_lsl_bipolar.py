@@ -54,8 +54,11 @@ try:
     dev.config.set_sample_rate(ChannelType.AUX, 1)
     dev.config.set_sample_rate(ChannelType.BIP, 1)
     
+    # Set the trigger settings
+    dev.config.triggers=True
+    
     # Enable BIP 01, AUX 1-1, 1-2 and 1-3
-    AUX_list = [] #0,1,2
+    AUX_list = [0,1,2] #0,1,2
     BIP_list = [0]
     
     # Retrieve all channels from the device and update which should be enabled

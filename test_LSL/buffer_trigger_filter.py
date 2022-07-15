@@ -6,21 +6,27 @@ import scipy.signal
 
 class processData:
 
-    def __init__(self, nChannels, samplingRate, nSamples, filterAfterN, largeInitializedSpace = 1000000): 
+    def __init__(self, nChannels, nDataChannels, samplingRate, nSamples, filterAfterN, cueChannel, largeInitializedSpace = 1000000): 
         self.nSamples = nSamples
         print('Length of buffer set to:', nSamples)
         self.nChannels = nChannels
         print('Channels to record:', nChannels)
+        self.nDataChannels = nDataChannels
+        print('Channels of EMG data to record:', self.nDataChannels)
         self.filterAfterN = filterAfterN
         self.samplingRate = samplingRate
+        self.cueChannel = cueChannel
 
         self.largeInitializedSpace = largeInitializedSpace #### this is arbitary 
         self.rawData = np.empty((self.largeInitializedSpace, self.nChannels))
-        self.rawDataBuffer = np.empty((self.nSamples, self.nChannels))
-        self.bpFilteredData = np.empty((self.nSamples, self.nChannels))
-        self.lpFilteredData = np.empty((self.nSamples, self.nChannels))
-        self.rectifiedData = np.empty((self.nSamples, self.nChannels))
+        self.rawDataBuffer = np.empty((self.nSamples, self.nDataChannels))
+        self.bpFilteredData = np.empty((self.nSamples, self.nDataChannels))
+        self.lpFilteredData = np.empty((self.nSamples, self.nDataChannels))
+        self.rectifiedData = np.empty((self.nSamples, self.nDataChannels))
+        self.MvcMean = np.empty((2500))
+        self.MvcCue = np.empty((2500))
         self.counter = 0 
+        self.MvcCounter = 0
         
 
     def addSample(self, newSample):
@@ -28,7 +34,8 @@ class processData:
         # FIFO buffer 
         # pop data from the array and push new sample 
         self.rawDataBuffer = np.roll(self.rawDataBuffer, -1, axis = 0)
-        self.rawDataBuffer[-1,:] = newSample
+        self.rawDataBuffer[-1,:] = newSample[:self.nDataChannels]
+        self.rawData[self.counter, :] = newSample
         self.counter += 1
 
         if self.counter >= np.shape(self.rawData)[0]:
@@ -48,17 +55,52 @@ class processData:
         b, a = scipy.signal.butter(order, lpHIghCutoff, 'lowpass',fs=self.samplingRate) 
         self.lpFilteredData = scipy.signal.filtfilt(b, a, self.rectifiedData, axis = 0)
 
-    def takeMean(self):
-        self.meanData = np.mean(self.lpFilteredData) # currently the mean of the whole nSamples AND ALL CHANNELS 
+    def takeMean(self, filter_after_n):
+        self.meanData = np.mean(self.lpFilteredData[-filter_after_n:, :])
+        # print(self.meanData)
         # This could be reduced to only be the most recent samples (such as the most recent filterAfterN samples)
+    
+    def cueStatus(self, filter_after_n):
+        # print("counter:", self.counter, "minus:", self.counter-filter_after_n)
+        # print("channel:", self.cueChannel)
+        # print(self.rawData[self.counter-filter_after_n:self.counter, self.cueChannel])
+        self.cue = (self.rawData[self.counter-filter_after_n:self.counter, self.cueChannel] == 0).any()
 
-    def processBuffer(self, bpLowCutoff, bpHighCutoff, lpHIghCutoff, order):
+    def processBuffer(self, bpLowCutoff, bpHighCutoff, lpHIghCutoff, order, filter_after_n):
         self.bandpassFilterData(bpLowCutoff, bpHighCutoff, order)
         self.rectifyData()
         self.lowpassFilterData(lpHIghCutoff, order)
-        self.takeMean()
+        self.cueStatus(filter_after_n)
+        self.takeMean(filter_after_n)
 
 
     def save(self, filename):
         np.savetxt(filename, self.rawData)
+        print("The data was saved to:", filename)
 
+
+    def processMVC(self, bpLowCutoff, bpHighCutoff, lpHIghCutoff, order, filter_after_n):
+
+        self.bandpassFilterData(bpLowCutoff, bpHighCutoff, order)
+        self.rectifyData()
+        self.lowpassFilterData(lpHIghCutoff, order)
+        self.cueStatus(filter_after_n)
+        self.takeMean(filter_after_n)
+
+        self.MvcMean[self.MvcCounter] = self.meanData
+        print("%.2f" % self.meanData, self.cue)
+        self.MvcCue[self.MvcCounter] = self.cue
+        self.MvcCounter += 1
+    
+    def maxMVC(self):
+        print(self.MvcMean)
+        print(self.MvcCue)
+
+        cue_diff = np.diff(self.MvcCue)
+        # print(cue_diff)
+        self.MvcCue[np.argmax(cue_diff == 1):np.argmax(cue_diff == -1)] = 1
+        print(np.argmax(cue_diff == 1))
+        print(np.argmax(cue_diff == -1))
+        max_MVC = np.max(self.MvcMean[self.MvcCue == 0])
+        print('The max of the MVC was:', max_MVC)
+        return max_MVC

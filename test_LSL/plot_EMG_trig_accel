@@ -1,0 +1,36 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+data = np.loadtxt("raw_data_20220721-160843")
+# raw_data_20220721-150654
+
+# plt.plot(data)
+# plt.show()
+print(np.shape(data)[1])
+
+data_new = data[~(data == 0).all(axis=1)]
+print(np.shape(data_new))
+
+x_data = data_new[:, 6]/4000
+
+fig, axs = plt.subplots(np.shape(data_new)[1] - 4, sharex=True) # dont need status or lsl clock
+fig.suptitle('Data Flow')
+axs[1].plot(x_data, data_new[:, 0])
+axs[1].title.set_text('EMG')
+
+axs[2].title.set_text('Accel')
+# axs[2].plot(x_data, data_new[:, 1])
+# axs[3].plot(x_data, data_new[:, 2])
+axs[2].plot(x_data, data_new[:, 3])
+
+axs[0].plot(x_data, data_new[:, 4])
+axs[0].title.set_text('Cue')
+
+plt.setp(axs[0].get_xticklabels(), visible=False)
+plt.setp(axs[1].get_xticklabels(), visible=False)
+# plt.setp(axs[2].get_xticklabels(), visible=False)
+# plt.setp(axs[3].get_xticklabels(), visible=False)
+
+
+# fig.show()
+plt.show()

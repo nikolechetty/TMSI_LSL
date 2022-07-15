@@ -12,14 +12,14 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 arduino = serial.Serial(port='COM4', baudrate=115200, timeout=.1)
 
-ANGLES = [20, 30] # small, medium, and large targets 
-SPEED = [20, 25] # slow, medium, and fast cursor speeds
+ANGLES = [30, 45] # small, medium, and large targets 
+SPEED = [25, 35] # slow, medium, and fast cursor speeds
 
 START_ANGLE = 180         # 0 deg is north, degrees go clockwise for positive
 # EXTENT_ANGLE = 60
 # ACTIVE_TIME = 20000 # 20 seconds
 
-NUM_ROTATIONS = 3
+NUM_ROTATIONS = 5
 
 
 
@@ -36,9 +36,12 @@ class ClockGUI():
     def __init__(self, combinations): 
         self.combination_counter = 0
         self.angle_width = combinations[self.combination_counter][0]
-        print('Angle width:', self.angle_width)
         self.hand_speed = combinations[self.combination_counter][1]
-        print('Hand speed:', self.hand_speed)
+        print('Angle width:', self.angle_width, 'Hand speed:', self.hand_speed)
+
+        Wt = self.angle_width/self.hand_speed/360*60*1000 # in millisec
+        Dt = (360 - self.angle_width)/self.hand_speed/360*60*1000 # in millisec
+        print('Wt:', "%.2f" % Wt, 'ms, Dt:',"%.2f" % Dt, 'ms')
 
         self.rotation_counter = 0
         self.target_trigger = False
@@ -117,9 +120,12 @@ class ClockGUI():
             self.combination_counter += 1
             if  self.combination_counter <= self.num_combinations - 1:
                 self.angle_width = combinations[self.combination_counter][0]
-                print('Angle width:', self.angle_width)
                 self.hand_speed = combinations[self.combination_counter][1]
-                print('Hand speed:', self.hand_speed)
+                print('Angle width:', self.angle_width, 'Hand speed:', self.hand_speed)
+
+                Wt = self.angle_width/self.hand_speed/360*60*1000 # in millisec
+                Dt = (360 - self.angle_width)/self.hand_speed/360*60*1000 # in millisec
+                print('Wt:',"%.2f" % Wt, 'ms, Dt:',"%.2f" % Dt, 'ms')
 
                 self.rotation_counter = 0  
                 self.start_at_zero = False
@@ -129,7 +135,7 @@ class ClockGUI():
                 root.after(100, self.freezeGUI(w, nx, ny, guiClass)) # need to pause
  
             else:
-                root.after(2000, root.destroy)
+                root.after(1000, root.destroy)
 
     def freezeGUI(self, w, nx, ny, guiClass):
         w.delete(ALL)

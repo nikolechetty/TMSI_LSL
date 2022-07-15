@@ -12,14 +12,14 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 arduino = serial.Serial(port='COM4', baudrate=115200, timeout=.1)
 
-ANGLES = [10, 20] # small, medium, and large targets 
-SPEED = [10, 15] # slow, medium, and fast cursor speeds
+ANGLES = [20, 30] # small, medium, and large targets 
+SPEED = [20, 25] # slow, medium, and fast cursor speeds
 
 START_ANGLE = 180         # 0 deg is north, degrees go clockwise for positive
 # EXTENT_ANGLE = 60
 # ACTIVE_TIME = 20000 # 20 seconds
 
-NUM_ROTATIONS = 2
+NUM_ROTATIONS = 3
 
 
 
@@ -28,14 +28,8 @@ combinations = list(itertools.product(ANGLES, SPEED))
 random.shuffle(combinations)
 print("Angle/Speed combinations:", combinations)
 
-# combination_counter = 0
-# angle_width = combinations[combination_counter][0]
-# print(angle_width)
-# hand_speed = combinations[combination_counter][1]
-# print(hand_speed)
 
 # target_trigger = False
-# speed_factor = 3
 
 
 class ClockGUI():
@@ -49,6 +43,17 @@ class ClockGUI():
         self.rotation_counter = 0
         self.target_trigger = False
         self.num_combinations = len(combinations)
+        self.phi_deg_prev, self.phi_rad_prev = self.getAngle()
+        self.phi_deg, self.phi_rad = self.getAngle()
+        self.start_at_zero = False
+        self.execute = False
+
+    def getAngle(self):
+        dt = datetime.now()
+        t_s_with_micros =  (dt.second + dt.microsecond/1e6)*self.hand_speed
+        phi_micros_rad = (pi/30 * t_s_with_micros) 
+        phi_micros_degrees = 360/60 * t_s_with_micros % 360
+        return phi_micros_degrees, phi_micros_rad
 
     def updateClock(self, w, nx, ny, guiClass):  # clock draw function
         # helper variables 
@@ -57,28 +62,35 @@ class ClockGUI():
         r2 = 0.8 * min(lx,ly)   # length of hand
 
         # create outline of circle
-        w.create_oval(x0-lx, y0-ly, x0+lx, y0+ly, width=4)  # clock face
+        w.create_oval(x0-lx, y0-ly, x0+lx, y0+ly, width=6)  # clock face
 
         # create the target area
         starting_formula = -(START_ANGLE-90)
-        w.create_arc(x0-lx, y0-ly, x0+lx, y0+ly, start=starting_formula, extent=-self.angle_width, style=PIESLICE, fill="blue")
+        w.create_arc(x0-lx, y0-ly, x0+lx, y0+ly, start=starting_formula, extent=-self.angle_width, style=PIESLICE, fill="#79d2f2")
 
         # Use the time to create smooth movement of the clock hand
-        dt = datetime.now()
-        t_s_with_micros =  (dt.second + dt.microsecond/1e6)*self.hand_speed
-        phi_micros_rad = (pi/30 * t_s_with_micros) 
-        phi_micros_degrees = 360/60 * t_s_with_micros % 360
+
+        self.phi_deg, self.phi_rad = self.getAngle()
+        # print(self.phi_deg)
+        if self.start_at_zero == False: 
+
+            if self.phi_deg >= 5:
+                self.phi_deg, self.phi_rad = 0, 0 
+            else: 
+                self.start_at_zero = True
 
 
-        x = x0 + r2 * sin(phi_micros_rad)   # position of end of the arrowhead
-        y = y0 - r2 * cos(phi_micros_rad)
-        w.create_line(x0, y0 , x, y, arrow=LAST, width=6)       # draw hand
-        # print('Angle of hand:', phi_degrees)
+        x = x0 + r2 * sin(self.phi_rad)   # position of end of the arrowhead
+        y = y0 - r2 * cos(self.phi_rad)
+        w.create_line(x0, y0 , x, y, arrow=LAST, width=8)       # draw hand
+
+
+        # print('Angle of hand:', self.phi_deg)
         # print('Time:',"%.2f" % t_s_with_micros, 'Angle deg:',"%.2f" %  phi_micros_degrees, 'Angle rad:', "%.2f" % phi_micros_rad)
         #    print("x:", x, ", y:", y)
 
         # know whether you are in the target or not
-        if phi_micros_degrees >= START_ANGLE and phi_micros_degrees <= (START_ANGLE+self.angle_width):
+        if self.phi_deg >= START_ANGLE and self.phi_deg <= (START_ANGLE+self.angle_width):
             # print("You're in the target!")
             # write the signal to the ardunio 
             arduino.write(bytes([1]))
@@ -96,8 +108,8 @@ class ClockGUI():
                 print('ROTATIONS:',self.rotation_counter)
             self.target_trigger = False
 
-        if self.rotation_counter >= NUM_ROTATIONS:
-            # more than X rotations
+        if self.rotation_counter >= NUM_ROTATIONS and self.phi_deg <= 10:
+            # more than X rotations and passes zero
             
 
             # swtich to the next combination
@@ -110,17 +122,18 @@ class ClockGUI():
                 print('Hand speed:', self.hand_speed)
 
                 self.rotation_counter = 0  
+                self.start_at_zero = False
 
                 # pause screen for a little bit - indicate change 
                 w.delete(ALL)
-                root.after(1000, self.freezeGUI(w, nx, ny, guiClass)) # need to pause
+                root.after(100, self.freezeGUI(w, nx, ny, guiClass)) # need to pause
  
             else:
-                root.after(1000, root.destroy)
+                root.after(2000, root.destroy)
 
     def freezeGUI(self, w, nx, ny, guiClass):
         w.delete(ALL)
-        w.after(1500, Clock, w, nx, ny, guiClass) # need to pause
+        w.after(150, Clock, w, nx, ny, guiClass) # need to pause
 
 
 def Clock(w, nx, ny, guiClass):                                # clock callback function

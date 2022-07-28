@@ -1,36 +1,203 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import data_processing
+
+
 
 data = np.loadtxt("raw_data_20220721-160843")
 # raw_data_20220721-150654
 
 # plt.plot(data)
 # plt.show()
-print(np.shape(data)[1])
+# print(np.shape(data)[1])
 
 data_new = data[~(data == 0).all(axis=1)]
-print(np.shape(data_new))
+# print(np.shape(data_new))
 
-x_data = data_new[:, 6]/4000
+x_data = (data_new[:, 6] - data_new[0, 6])/4000
 
-fig, axs = plt.subplots(np.shape(data_new)[1] - 4, sharex=True) # dont need status or lsl clock
-fig.suptitle('Data Flow')
-axs[1].plot(x_data, data_new[:, 0])
-axs[1].title.set_text('EMG')
+# fig, axs = plt.subplots(np.shape(data_new)[1] - 4, sharex=True) # dont need status or lsl clock
+# fig.suptitle('Data Flow')
+# axs[1].plot(x_data, data_new[:, 0])
+# axs[1].title.set_text('EMG')
 
-axs[2].title.set_text('Accel')
-# axs[2].plot(x_data, data_new[:, 1])
-# axs[3].plot(x_data, data_new[:, 2])
-axs[2].plot(x_data, data_new[:, 3])
+# axs[2].title.set_text('Accel')
+# # axs[2].plot(x_data, data_new[:, 1])
+# # axs[3].plot(x_data, data_new[:, 2])
+# axs[2].plot(x_data, data_new[:, 3])
 
-axs[0].plot(x_data, data_new[:, 4])
-axs[0].title.set_text('Cue')
+# axs[0].plot(x_data, data_new[:, 4])
+# axs[0].title.set_text('Cue')
 
-plt.setp(axs[0].get_xticklabels(), visible=False)
-plt.setp(axs[1].get_xticklabels(), visible=False)
+# plt.setp(axs[0].get_xticklabels(), visible=False)
+# plt.setp(axs[1].get_xticklabels(), visible=False)
 # plt.setp(axs[2].get_xticklabels(), visible=False)
 # plt.setp(axs[3].get_xticklabels(), visible=False)
 
 
 # fig.show()
 plt.show()
+
+NUM_SAMPLES_BUFFER = 400
+FILTER_AFTER_N = 100
+BP_LOW_CUTOFF = 20
+BP_HIGH_CUTOFF = 500
+ORDER = 5
+LP_HIGH_CUTOFF = 10
+
+Mvc = 232 
+percent_mvc = 0.3
+mvc_threshold = percent_mvc*Mvc
+
+process = data_processing.postProcessData(4000, data_new[:,0])
+process.processAll(BP_LOW_CUTOFF, BP_HIGH_CUTOFF, LP_HIGH_CUTOFF, ORDER, FILTER_AFTER_N)
+
+
+threshold_crossings = np.diff(process.lpFilteredData > mvc_threshold, prepend=False)
+threshold_crossings_up = np.argwhere(threshold_crossings)[::2,0]
+
+
+stop_cue = (np.where(np.diff(data_new[:, 4]) == 1)[0])
+start_cue = (np.where(np.diff(data_new[:, 4]) == -1)[0])
+
+print("threshold corssing:", threshold_crossings_up)
+print("start:", start_cue)
+print("stop:", stop_cue)
+
+fig, axs = plt.subplots(2, sharex=True) # dont need status or lsl clock
+fig.suptitle('Data Flow')
+
+axs[0].plot(x_data, data_new[:, 0])
+axs[0].title.set_text('EMG')
+
+for xc in start_cue:
+    axs[1].axvline(x=xc/4000, color='g')
+for xc in stop_cue:
+    axs[1].axvline(x=xc/4000, color='r')
+
+axs[1].plot(x_data, process.lpFilteredData)
+axs[1].title.set_text('LP Filtered EMG')
+axs[1].axhline(y=mvc_threshold, color='g')
+
+for ups in threshold_crossings_up:
+    axs[1].axvline(x=ups/4000, color='m')
+
+for xc in start_cue:
+    axs[1].axvline(x=xc/4000, color='g')
+for xc in stop_cue:
+    axs[1].axvline(x=xc/4000, color='r')
+
+plt.show()
+
+plt.setp(axs[0].get_xticklabels(), visible=False)
+plt.setp(axs[1].get_xticklabels(), visible=False)
+
+
+
+# Exclude the first pulse - that is ardunio power cycling
+start_cue = start_cue[1:] 
+stop_cue = stop_cue[1:]
+
+threshold_closest = np.empty(np.size(start_cue[:]))
+threshold_closest[:] = np.nan
+correct = np.empty(np.size(start_cue[:]))
+###for every value in the strt_cue 
+for idx_cue, cue in enumerate(start_cue[:]):
+    after_start = start_cue[idx_cue] <= threshold_crossings_up
+    before_stop = threshold_crossings_up <= stop_cue[idx_cue]
+    # check if there is a value between start_cue and stop cue
+    if np.any(np.logical_and(after_start, before_stop)):
+        in_target = np.argwhere(np.logical_and(after_start, before_stop))
+        closet_value = in_target[0]
+        threshold_closest[idx_cue] = threshold_crossings_up[in_target[0]]
+        correct[idx_cue] = True
+    else:
+        # if not - get closet 
+        idx = (np.abs(threshold_crossings_up - start_cue[idx_cue])).argmin()
+
+        threshold_closest[idx_cue] = threshold_crossings_up[idx]
+        correct[idx_cue] = False
+         # get rid of values greater than half the distance between the next cue 
+
+print("closest:", threshold_closest)
+print("correctness:", correct)
+
+threshold_distance = threshold_closest - start_cue
+print("distance away:", threshold_distance)
+
+plt.hist(threshold_distance/4000, bins=8)
+plt.title('Time of "click" from cue onset')
+plt.xlabel('Time (in seconds)')
+plt.ylabel('Occurances')
+
+plt.show()
+
+print(np.shape(correct))
+
+ID = np.array([2.8, 2.8, 3.5, 3.5])
+
+performance = np.array([4, 2, 3, 4])/5
+print(performance)
+
+plt.scatter(ID, 1-performance)
+plt.title('Fit')
+plt.xlabel('Index of difficulty (bits)')
+plt.ylabel('Error rate')
+plt.xlim([0, 4])
+plt.ylim([0, 1])
+
+plt.show()
+
+
+
+
+
+################ Full preprocessing figure 
+
+# fig, axs = plt.subplots(6, sharex=True) # dont need status or lsl clock
+# fig.suptitle('Data Flow')
+# axs[0].plot(x_data, data_new[:, 4])
+# axs[0].title.set_text('Cue')
+
+# for xc in start_cue:
+#     axs[0].axvline(x=xc, color='g')
+# for xc in stop_cue:
+#     axs[0].axvline(x=xc, color='r')
+
+
+# axs[1].plot(x_data, data_new[:, 0])
+# axs[1].title.set_text('EMG')
+
+# axs[2].plot(x_data, process.bpFilteredData)
+# axs[2].title.set_text('BP Filtered EMG')
+
+# axs[3].plot(x_data, process.rectifiedData)
+# axs[3].title.set_text('Rectified EMG')
+
+# axs[4].plot(x_data, process.lpFilteredData)
+# axs[4].title.set_text('LP Filtered EMG')
+# axs[4].axhline(y=mvc_threshold, color='g')
+
+# for ups in threshold_crossings_up:
+#     axs[4].axvline(x=ups/4000, color='m')
+
+# for xc in start_cue:
+#     axs[4].axvline(x=xc, color='g')
+# for xc in stop_cue:
+#     axs[4].axvline(x=xc, color='r')
+
+# axs[5].title.set_text('Accel')
+# axs[5].plot(x_data, data_new[:, 3])
+
+# print(np.size(process.meanData))
+# axs[6].plot(x_data[:np.size(process.meanData)], process.meanData)
+# axs[6].title.set_text('Mean EMG')
+
+# plt.show()
+
+# plt.setp(axs[0].get_xticklabels(), visible=False)
+# plt.setp(axs[1].get_xticklabels(), visible=False)
+# plt.setp(axs[2].get_xticklabels(), visible=False)
+# plt.setp(axs[3].get_xticklabels(), visible=False)
+# plt.setp(axs[4].get_xticklabels(), visible=False)
+# plt.setp(axs[5].get_xticklabels(), visible=False)

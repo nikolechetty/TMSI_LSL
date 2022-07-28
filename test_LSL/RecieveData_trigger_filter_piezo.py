@@ -1,7 +1,7 @@
 """Rudimentary program to show how to read and filter a single-channel 
 time series from LSL an provide haptic feedback."""
 
-from pylsl import StreamInlet, resolve_stream, StreamInfo
+from pylsl import StreamInlet, resolve_stream, StreamInfo, StreamOutlet
 from buffer_trigger_filter import *
 import time
 from ctypes import *
@@ -61,6 +61,11 @@ def main():
 
         time.sleep(2) # Added so I can see the info data before data starts streaming
 
+        # Open an LSL stream for sending out marker info 
+        info = StreamInfo('MyMarkerStream', 'Markers', 1, 0, 'string', 'myuidw43536')
+        # next make an outlet
+        outlet = StreamOutlet(info)
+
         process_data = processData(nChannels = streams[0].channel_count(), samplingRate = streams[0].nominal_srate(), nSamples = NUM_SAMPLES_BUFFER, 
             nDataChannels = DATA_CHANNELS, cueChannel = CUE_CHANNEL, filterAfterN = FILTER_AFTER_N)
 
@@ -77,8 +82,11 @@ def main():
                 print("%.2f" % process_data.meanData, process_data.cue)
 
                 # Add pulse to the peizotac system 
-                if process_data.meanData > PULSE_THRESHOLD and process_data.cue == True:
+                if process_data.meanData > PULSE_THRESHOLD: #and process_data.cue == True
                     tdk.Pulse(device, TACTOR_ID, TACTOR_PULSE_WIDTH, TACTOR_DELAY)
+                if process_data.meanData > PULSE_THRESHOLD and process_data.cue == True:
+                    outlet.push_sample(['green'])
+
 
 
     finally: # except KeyboardInterrupt

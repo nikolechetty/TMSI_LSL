@@ -4,7 +4,9 @@ import data_processing
 
 
 
-data = np.loadtxt("raw_data_20220721-160843")
+# raw_data_20220728-182025
+data = np.loadtxt("raw_data/raw_data_20220728-183242")
+# raw_data_20220721-160843 - nikole testing 2 
 # raw_data_20220721-150654
 
 # plt.plot(data)
@@ -42,8 +44,8 @@ NUM_SAMPLES_BUFFER = 400
 FILTER_AFTER_N = 100
 BP_LOW_CUTOFF = 20
 BP_HIGH_CUTOFF = 500
-ORDER = 5
-LP_HIGH_CUTOFF = 10
+ORDER = 2
+LP_HIGH_CUTOFF = 5
 
 Mvc = 232 
 percent_mvc = 0.3
@@ -53,18 +55,40 @@ process = data_processing.postProcessData(4000, data_new[:,0])
 process.processAll(BP_LOW_CUTOFF, BP_HIGH_CUTOFF, LP_HIGH_CUTOFF, ORDER, FILTER_AFTER_N)
 
 
-threshold_crossings = np.diff(process.lpFilteredData > mvc_threshold, prepend=False)
-threshold_crossings_up = np.argwhere(threshold_crossings)[::2,0]
+def findThresholdCrossing(lpData, threshold):
+    threshold_crossings = np.diff(lpData > threshold, prepend=False)
+    positive_difference = np.diff(lpData, prepend=0) >= 0 
+    threshold_crossings_positive = np.argwhere(np.logical_and(threshold_crossings, positive_difference))[:,0]
+    return threshold_crossings_positive
 
+threshold_crossings_up = findThresholdCrossing(process.lpFilteredData, mvc_threshold)
+
+def thresholdCrossed(lpData, threshold):
+    threshold_crossings = np.diff(lpData > threshold)
+    print("function crossing", threshold_crossings)
+    positive_difference = np.diff(lpData) > 0    
+    print("funciton difference", positive_difference) 
+    thresholdCrossed =  np.any(np.logical_and(threshold_crossings, positive_difference))
+    return thresholdCrossed
+
+crossings = thresholdCrossed(np.array([0,0,0,0,0,0,0]), 1)
+print("coressed?", crossings)
+
+crossings = thresholdCrossed(np.array([2,2,2,2,2,2,2,2,2]), 1)
+print("coressed 2?", crossings)
+
+crossings = thresholdCrossed(np.array([0, 0, 0, 1, 1, 1,2,2,2,2,2]), 1)
+print("coressed true?", crossings)
 
 stop_cue = (np.where(np.diff(data_new[:, 4]) == 1)[0])
 start_cue = (np.where(np.diff(data_new[:, 4]) == -1)[0])
+
 
 print("threshold corssing:", threshold_crossings_up)
 print("start:", start_cue)
 print("stop:", stop_cue)
 
-fig, axs = plt.subplots(2, sharex=True) # dont need status or lsl clock
+fig, axs = plt.subplots(3, sharex=True) # dont need status or lsl clock
 fig.suptitle('Data Flow')
 
 axs[0].plot(x_data, data_new[:, 0])
@@ -86,6 +110,10 @@ for xc in start_cue:
     axs[1].axvline(x=xc/4000, color='g')
 for xc in stop_cue:
     axs[1].axvline(x=xc/4000, color='r')
+
+
+axs[2].title.set_text('Accel')
+axs[2].plot(x_data, data_new[:, 3])
 
 plt.show()
 

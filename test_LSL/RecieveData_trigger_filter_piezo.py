@@ -7,8 +7,8 @@ import time
 from ctypes import *
 import os
 
-Mvc = 232 
-percent_mvc = 0.20
+Mvc = 311.01105808696354 
+percent_mvc = 0.3
 
 NUM_SAMPLES_BUFFER = 400
 FILTER_AFTER_N = 100
@@ -24,6 +24,8 @@ TACTOR_PULSE_WIDTH = 15 # ms ##### Should not be larger than (filter_after_n/sam
 TACTOR_DELAY = 0 # ms
 PULSE_THRESHOLD = Mvc*percent_mvc #muV
 DEVICE_PORT = "COM3"
+
+FEEDBACK = True 
 
 def main():
 
@@ -74,15 +76,15 @@ def main():
             # interested in it)
             sample, timestamp = inlet.pull_sample()
             # print(timestamp, sample)
-            process_data.addSample(sample)
+            process_data.addSample(sample, timestamp)
 
             
             if process_data.counter % process_data.filterAfterN == 0:
                 process_data.processBuffer(BP_LOW_CUTOFF, BP_HIGH_CUTOFF, LP_HIGH_CUTOFF, ORDER, FILTER_AFTER_N, PULSE_THRESHOLD)
-                print("%.2f" % process_data.meanData, process_data.cue)
+                # print("%.2f" % process_data.meanData, process_data.cue)
 
                 # Add pulse to the peizotac system 
-                if process_data.thresholdCrossed: #and process_data.cue == True
+                if process_data.thresholdCrossed and FEEDBACK: #and process_data.cue == True
                     tdk.Pulse(device, TACTOR_ID, TACTOR_PULSE_WIDTH, TACTOR_DELAY)
                 if process_data.thresholdCrossed and process_data.cue == True:
                     outlet.push_sample(['green'])
@@ -92,8 +94,7 @@ def main():
     finally: # except KeyboardInterrupt
         # Save the raw data to a file
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        save_name = "raw_data_" + timestr
-        process_data.save(save_name)
+        process_data.save(timestr)
 
         # Shutdown the connection to the piezotac
         tdk.UpdateTI()

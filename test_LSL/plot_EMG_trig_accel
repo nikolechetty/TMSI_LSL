@@ -1,11 +1,41 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import data_processing
+import math
 
 
 
 # raw_data_20220728-182025
 data = np.loadtxt("raw_data/raw_data_20220728-183242")
+gui_data = np.load("../clock_gui/combo_info_20220729-151330.npz")
+
+repitions = gui_data['reps']
+print("repitions:", gui_data['reps'])
+print('Wt/Dt combos:', gui_data['combos'])
+
+ID = np.log2(gui_data['combos'][:,1]/gui_data['combos'][:,0])
+print("ID:",ID)
+
+plt.scatter(gui_data['combos'][:,0], gui_data['combos'][:,1], c=ID, s=35)
+plt.title('Levels of difficulty tested')
+plt.xlabel('$W_{t}$ - Target Width (ms)')
+plt.ylabel('$D{t}$ - Temporal Distance (ms)')
+plt.set_cmap('RdYlGn_r')
+cbar = plt.colorbar()
+cbar.set_label('Index of Difficulty (bits)')
+plt.show()
+
+
+fig,ax = plt.subplots(1)
+plt.scatter(ID, np.zeros(np.size(ID)), alpha=0.5)
+# Turn off tick labels
+ax.set_yticklabels([])
+ax.set_yticks([])
+plt.title("Index of Difficulty")
+plt.xlabel("Index of Difficulty")
+plt.show()
+
+
 # raw_data_20220721-160843 - nikole testing 2 
 # raw_data_20220721-150654
 
@@ -71,24 +101,26 @@ def thresholdCrossed(lpData, threshold):
     thresholdCrossed =  np.any(np.logical_and(threshold_crossings, positive_difference))
     return thresholdCrossed
 
-crossings = thresholdCrossed(np.array([0,0,0,0,0,0,0]), 1)
-print("coressed?", crossings)
+# crossings = thresholdCrossed(np.array([0,0,0,0,0,0,0]), 1)
+# print("coressed?", crossings)
 
-crossings = thresholdCrossed(np.array([2,2,2,2,2,2,2,2,2]), 1)
-print("coressed 2?", crossings)
+# crossings = thresholdCrossed(np.array([2,2,2,2,2,2,2,2,2]), 1)
+# print("coressed 2?", crossings)
 
-crossings = thresholdCrossed(np.array([0, 0, 0, 1, 1, 1,2,2,2,2,2]), 1)
-print("coressed true?", crossings)
+# crossings = thresholdCrossed(np.array([0, 0, 0, 1, 1, 1,2,2,2,2,2]), 1)
+# print("coressed true?", crossings)
 
 stop_cue = (np.where(np.diff(data_new[:, 4]) == 1)[0])
 start_cue = (np.where(np.diff(data_new[:, 4]) == -1)[0])
 
+if stop_cue[0] < start_cue[0]:
+    stop_cue = stop_cue[1:]
 
 print("threshold corssing:", threshold_crossings_up)
 print("start:", start_cue)
 print("stop:", stop_cue)
 
-fig, axs = plt.subplots(3, sharex=True) # dont need status or lsl clock
+fig, axs = plt.subplots(2, sharex=True) # dont need status or lsl clock
 fig.suptitle('Data Flow')
 
 axs[0].plot(x_data, data_new[:, 0])
@@ -100,8 +132,8 @@ for xc in stop_cue:
     axs[1].axvline(x=xc/4000, color='r')
 
 axs[1].plot(x_data, process.lpFilteredData)
-axs[1].title.set_text('LP Filtered EMG')
-axs[1].axhline(y=mvc_threshold, color='g')
+axs[1].title.set_text('Filtered EMG')
+axs[1].axhline(y=mvc_threshold, color='darkmagenta')
 
 for ups in threshold_crossings_up:
     axs[1].axvline(x=ups/4000, color='m')
@@ -112,25 +144,30 @@ for xc in stop_cue:
     axs[1].axvline(x=xc/4000, color='r')
 
 
-axs[2].title.set_text('Accel')
-axs[2].plot(x_data, data_new[:, 3])
+# axs[2].title.set_text('Accel')
+# axs[2].plot(x_data, data_new[:, 3])
 
+# Set common labels
+axs[1].set_xlabel('Time (in seconds)')
+axs[1].set_ylabel('Amplitude (uV)')
+axs[0].set_ylabel('Amplitude (uV)')
 plt.show()
 
 plt.setp(axs[0].get_xticklabels(), visible=False)
-plt.setp(axs[1].get_xticklabels(), visible=False)
+# plt.setp(axs[1].get_xticklabels(), visible=False)
 
 
 
 # Exclude the first pulse - that is ardunio power cycling
-start_cue = start_cue[1:] 
-stop_cue = stop_cue[1:]
+start_cue = start_cue[:] # [1:]
+stop_cue = stop_cue[:] #[1:]
 
 threshold_closest = np.empty(np.size(start_cue[:]))
 threshold_closest[:] = np.nan
 correct = np.empty(np.size(start_cue[:]))
 ###for every value in the strt_cue 
 for idx_cue, cue in enumerate(start_cue[:]):
+
     after_start = start_cue[idx_cue] <= threshold_crossings_up
     before_stop = threshold_crossings_up <= stop_cue[idx_cue]
     # check if there is a value between start_cue and stop cue
@@ -154,27 +191,45 @@ threshold_distance = threshold_closest - start_cue
 print("distance away:", threshold_distance)
 
 plt.hist(threshold_distance/4000, bins=8)
-plt.title('Time of "click" from cue onset')
+plt.title('Time of "click" from cue onset (all levels)')
 plt.xlabel('Time (in seconds)')
 plt.ylabel('Occurances')
+plt.show()
+
 
 plt.show()
 
-print(np.shape(correct))
+repitions = 5 ############################################ REMOVE 
+level = np.arange(len(correct))//repitions
+print('Levels:', level)
+performance = np.bincount(level,correct)/np.bincount(level)
+print('performance per level:', performance)
 
-ID = np.array([2.8, 2.8, 3.5, 3.5])
+# plt.scatter(ID, 1-performance)
+# plt.title('Fit')
+# plt.xlabel('Index of difficulty (bits)')
+# plt.ylabel('Error rate')
+# plt.xlim([0, 4])
+# plt.ylim([0, 1])
 
-performance = np.array([4, 2, 3, 4])/5
-print(performance)
 
-plt.scatter(ID, 1-performance)
-plt.title('Fit')
-plt.xlabel('Index of difficulty (bits)')
-plt.ylabel('Error rate')
-plt.xlim([0, 4])
-plt.ylim([0, 1])
+bins = np.linspace(np.min(threshold_distance)/4000, np.max(threshold_distance)/4000, 10)
 
+
+
+for lvl in np.unique(level):
+    indexes = np.equal(level, lvl)
+    plt.hist(threshold_distance[indexes]/4000, bins, alpha=0.5, label = lvl) # change lvl to ID in the future
+# pyplot.hist(x, bins, alpha=0.5, label='x')
+# pyplot.hist(y, bins, alpha=0.5, label='y')
+plt.legend(loc='upper right')
+plt.title('Time of "click" from cue onset per level')
+plt.xlabel('Time (in seconds)')
+plt.ylabel('Occurances')
 plt.show()
+
+
+
 
 
 

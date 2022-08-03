@@ -21,6 +21,8 @@ class processData:
         self.largeInitializedSpace = largeInitializedSpace #### this is arbitary 
         self.rawData = np.empty((self.largeInitializedSpace, self.nChannels))
         self.rawDataBuffer = np.empty((self.nSamples, self.nDataChannels))
+        self.rawTimestamps = np.empty((self.largeInitializedSpace))
+        self.rawTimestampBuffer = np.empty((self.nSamples))
         # self.bpFilteredData = np.empty((self.nSamples, self.nDataChannels))
         # self.lpFilteredData = np.empty((self.nSamples, self.nDataChannels))
         self.rectifiedData = np.empty((self.nSamples, self.nDataChannels))
@@ -30,21 +32,28 @@ class processData:
         self.MvcCounter = 0
         self.thresholdCrossed = False
         self.thresholdCrossedHistory = np.full((math.ceil(self.nSamples/self.filterAfterN)), False)
-        print(self.thresholdCrossedHistory)
+        self.timestampCrossedHistory = np.empty((2500))
+        self.crossedCounter = 0
 
-    def addSample(self, newSample):
+    def addSample(self, newSample, newTimestamp):
         # numpy.roll 
         # FIFO buffer 
         # pop data from the array and push new sample 
         self.rawDataBuffer = np.roll(self.rawDataBuffer, -1, axis = 0)
         self.rawDataBuffer[-1,:] = newSample[:self.nDataChannels]
         self.rawData[self.counter, :] = newSample
+
+        self.rawTimestampBuffer = np.roll(self.rawTimestampBuffer, -1, axis = 0)
+        self.rawTimestampBuffer[-1] = newTimestamp
+        self.rawTimestamps[self.counter] = newTimestamp
+        
         self.counter += 1
+        
 
         if self.counter >= np.shape(self.rawData)[0]:
             # if you run out of space in the initialed, add more empty sapce
             self.rawData = np.append(self.rawData, np.empty((self.largeInitializedSpace, self.nChannels)))
-
+            self.rawTimestamps = np.append(self.rawTimestamps, np.empty((self.largeInitializedSpace)))
  
 
     def bandpassFilterData(self, bpLowCutoff, bpHighCutoff, order):
@@ -72,20 +81,28 @@ class processData:
         positive_difference = np.diff(np.squeeze(self.lpFilteredData[50:-25])) > 0 #[-filter_after_n:, :]
         # print("positive diff", positive_difference)
         self.thresholdCrossed =  np.any(np.logical_and(threshold_crossings, positive_difference))
+        # print("was the threshold crossed?", self.thresholdCrossed)
+        if self.thresholdCrossed:
+            timestamp_of_cross_log_index = np.argwhere(np.logical_and(threshold_crossings, positive_difference))
+            # print("logical:", timestamp_of_cross_log_index)
+            timestamp_crossed = self.rawTimestampBuffer[50:-25][timestamp_of_cross_log_index]
+            # print("timestamp:", timestamp_crossed)
+            self.timestampCrossedHistory[self.crossedCounter] = timestamp_crossed[0]
+            self.crossedCounter += 1 
 
-        if self.thresholdCrossed == True:
-            print("crossed!")
-        else:
-            print(":(")
+        # if self.thresholdCrossed == True:
+        #     print("crossed!")
+        # else:
+        #     print(":(")
 
         self.thresholdCrossedHistory = np.roll(self.thresholdCrossedHistory, -1, axis = 0)
         
         if self.thresholdCrossedHistory.any():
             self.thresholdCrossed = False
-            print('negated')
+            # print('negated')
 
         self.thresholdCrossedHistory[-1] = self.thresholdCrossed
-        print(self.thresholdCrossedHistory)
+        # print(self.thresholdCrossedHistory)
         
 
 
@@ -104,9 +121,19 @@ class processData:
         self.thresholdCross(filter_after_n, mvc_threshold) 
 
 
-    def save(self, filename):
-        np.savetxt(filename, self.rawData)
-        print("The data was saved to:", filename)
+    def save(self, timestr):
+        print("The data is being saved, please wait")
+        save_name = "raw_data_" + timestr
+        np.savetxt(save_name, self.rawData)
+        print("The data was saved to:", save_name)
+
+        save_name_timestamps = "timestamp_data_" + timestr
+        np.savetxt(save_name_timestamps, self.rawTimestamps)
+        print("The timestamp data was saved to:", save_name_timestamps)
+
+        save_name_timestamps_crossed = "timestamp_crossed_data_" + timestr
+        np.savetxt(save_name_timestamps_crossed, self.timestampCrossedHistory)
+        print("Timestamp data was saved to:", save_name_timestamps_crossed)
 
 
     def processMVC(self, bpLowCutoff, bpHighCutoff, lpHIghCutoff, order, filter_after_n):
@@ -127,10 +154,16 @@ class processData:
         print(self.MvcCue)
 
         cue_diff = np.diff(self.MvcCue)
+        print("begin index:", np.argmax(cue_diff == 1))
+        print("end index:", np.argmax(cue_diff == -1))
         # print(cue_diff)
-        self.MvcCue[np.argmax(cue_diff == 1):np.argmax(cue_diff == -1)] = 1
-        print(np.argmax(cue_diff == 1))
-        print(np.argmax(cue_diff == -1))
-        max_MVC = np.max(self.MvcMean[self.MvcCue == 0])
+        print("cue:", self.MvcCue)
+        self.MvcCue[np.argmax(cue_diff == 1):np.argmax(cue_diff == -1)] = 0
+        cue_diff = np.diff(self.MvcCue)
+        print("begin index new:", np.argmax(cue_diff == 1))
+        begin_index = np.argmax(cue_diff == 1)
+        end_index = np.argmax(cue_diff == -1)
+        print("end index new:", np.argmax(cue_diff == -1))
+        max_MVC = np.max(self.MvcMean[self.MvcCue == 1])
         print('The max of the MVC was:', max_MVC)
         return max_MVC

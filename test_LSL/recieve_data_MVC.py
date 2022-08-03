@@ -10,11 +10,11 @@ from datetime import datetime
 import threading
 
 NUM_SAMPLES_BUFFER = 400
-FILTER_AFTER_N = 200
+FILTER_AFTER_N = 100
 BP_LOW_CUTOFF = 20
 BP_HIGH_CUTOFF = 500
-ORDER = 5
-LP_HIGH_CUTOFF = 10
+ORDER = 2
+LP_HIGH_CUTOFF = 5
 DATA_CHANNELS = 1 # the channels up to this number will be considered EMG and processed 
 CUE_CHANNEL = 4
 
@@ -47,7 +47,7 @@ def main():
             # interested in it)
             sample, timestamp = inlet.pull_sample()
             # print(timestamp, sample)
-            process_data.addSample(sample)
+            process_data.addSample(sample, timestamp)
 
             
             if process_data.counter % process_data.filterAfterN == 0:

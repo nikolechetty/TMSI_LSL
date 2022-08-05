@@ -22,7 +22,7 @@ def main():
 
     print("now sending markers...")
     markernames = ['Test', 'green', 'Testtest', 'Test-1-2-3']
-    time.sleep(10)
+    
     while True:
         # pick a sample to send an wait for a bit
         outlet.push_sample([random.choice(markernames)])

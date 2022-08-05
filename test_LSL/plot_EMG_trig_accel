@@ -7,7 +7,10 @@ import math
 
 # raw_data_20220728-182025
 data = np.loadtxt("raw_data/raw_data_20220728-183242")
+data_crossed = np.loadtxt("raw_data/timestamp_crossed_data_20220802-164047")
+data_timestamps = np.loadtxt("raw_data/timestamp_data_20220802-164047")
 gui_data = np.load("../clock_gui/combo_info_20220729-151330.npz")
+
 
 repitions = gui_data['reps']
 print("repitions:", gui_data['reps'])
@@ -68,7 +71,7 @@ x_data = (data_new[:, 6] - data_new[0, 6])/4000
 
 
 # fig.show()
-plt.show()
+# plt.show()
 
 NUM_SAMPLES_BUFFER = 400
 FILTER_AFTER_N = 100

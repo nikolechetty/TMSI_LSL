@@ -52,8 +52,8 @@ import matplotlib.pyplot as plt
 
 ##############################
 
-W_t = [80, 140, 250] # small, medium, and large targets 
-D_t = [1400, 1900, 2400] # slow, medium, and fast cursor speeds
+W_t = [60, 150, 220] # small, medium, and large targets 
+D_t = [1000, 1600, 2200] # slow, medium, and fast cursor speeds
 
 
 
@@ -93,3 +93,6 @@ plt.show()
 
 plt.scatter(ID_array[1:], np.zeros(np.size(ID_array[1:])), alpha=0.5)
 plt.show()
+
+print(ID_array)
+print(np.round(np.sort(ID_array), 2))

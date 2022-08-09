@@ -7,7 +7,7 @@ import time
 from ctypes import *
 import os
 
-Mvc = 393.49204563833797
+Mvc = 379.6267184490227
 percent_mvc = 0.3
 
 NUM_SAMPLES_BUFFER = 600

@@ -16,12 +16,12 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 
 
-WT = [60, 150, 210] # small, medium, and large targets 
+WT = [150] # small, medium, and large targets #60, 150, 
 DT = [1000, 1600, 2200] # slow, medium, and fast cursor speeds
 
 START_ANGLE = 180         # 0 deg is north, degrees go clockwise for positive
 
-NUM_ROTATIONS = 10
+NUM_ROTATIONS = 25
 CANVAS_SIZE = 2000
 
 BLUE_FILL = "#79d2f2"

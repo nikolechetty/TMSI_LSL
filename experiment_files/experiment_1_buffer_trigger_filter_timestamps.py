@@ -89,7 +89,7 @@ class processData:
             # print("logical:", timestamp_of_cross_log_index)
             self.timestamp_crossed = self.rawTimestampBuffer[50:-25][timestamp_of_cross_log_index]
             # print("timestamp:", timestamp_crossed)
-            self.timestampCrossedHistory[self.crossedCounter] = timestamp_crossed[0]
+            self.timestampCrossedHistory[self.crossedCounter] = self.timestamp_crossed[0]
             self.crossedCounter += 1 
 
         # if self.thresholdCrossed == True:
@@ -117,9 +117,9 @@ class processData:
             if (np.diff(self.rawData[self.counter-filter_after_n:self.counter, self.cueChannel]) == -1).any():
                 # update the timesamp
                 cue_index = np.argwhere((np.diff(self.rawData[self.counter-filter_after_n:self.counter, self.cueChannel]) == -1))
-                print(cue_index)
+                # print(cue_index)
                 self.cue_timestamp = self.rawTimestamps[self.counter-filter_after_n:self.counter][cue_index]
-                print(self.cue_timestamp)
+                # print(self.cue_timestamp)
             ################
         if ~self.cue:
             self.cue_timestamp = np.inf

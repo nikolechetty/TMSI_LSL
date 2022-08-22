@@ -16,8 +16,8 @@ ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 
 
-WT = [60] # small, medium, and large targets #60, 150, 230 
-DT = [1000, 1600, 2200] # slow, medium, and fast cursor speeds ,1000 1600, 2200
+WT = [150] # small, medium, and large targets #60, 150, 
+DT = [1000, 1600, 2200] # slow, medium, and fast cursor speeds
 
 START_ANGLE = 180         # 0 deg is north, degrees go clockwise for positive
 
@@ -25,7 +25,7 @@ NUM_ROTATIONS = 25
 CANVAS_SIZE = 2000
 
 BLUE_FILL = "#79d2f2"
-CORRECT_FILL = "green" #green
+CORRECT_FILL = "green"
 
 
 
@@ -134,7 +134,7 @@ class ClockGUI():
                 print('ROTATIONS:',self.rotation_counter)
             self.target_trigger = False
 
-        if self.phi_deg <= 15:
+        if self.phi_deg <= 10:
             #reset fill to blue at the at north position
             self.fill = BLUE_FILL
 

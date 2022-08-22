@@ -2,12 +2,12 @@
 time series from LSL an provide haptic feedback."""
 
 from pylsl import StreamInlet, resolve_stream, StreamInfo, StreamOutlet
-from experiment_1_buffer_trigger_filter import *
+from experiment_1_buffer_trigger_filter_timestamps import *
 import time
 from ctypes import *
 import os
 
-Mvc = 720.9829862181017
+Mvc = 312.2394555720875
 percent_mvc = 0.2
 
 NUM_SAMPLES_BUFFER = 600
@@ -87,8 +87,11 @@ def main():
                 # Add pulse to the peizotac system 
                 if process_data.thresholdCrossed and FEEDBACK: #and process_data.cue == True
                     tdk.Pulse(device, TACTOR_ID, TACTOR_PULSE_WIDTH, TACTOR_DELAY)
-                if process_data.thresholdCrossed and process_data.cue == True:
+                # give visual feedback
+                # print("cue:", process_data.cue_timestamp, "crossed:",process_data.timestamp_crossed[0] )
+                if np.any(process_data.cue_timestamp < process_data.timestamp_crossed):
                     outlet.push_sample(['green'])
+                    # print("success")
 
 
 

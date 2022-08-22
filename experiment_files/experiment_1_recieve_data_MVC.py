@@ -10,7 +10,7 @@ from datetime import datetime
 import threading
 
 NUM_SAMPLES_BUFFER = 400
-FILTER_AFTER_N = 100
+FILTER_AFTER_N = 200
 BP_LOW_CUTOFF = 20
 BP_HIGH_CUTOFF = 500
 ORDER = 2
